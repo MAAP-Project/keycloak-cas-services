@@ -9,7 +9,13 @@ import io.github.johnjcool.keycloak.broker.cas.model.ServiceResponse;
 import io.github.johnjcool.keycloak.broker.cas.model.Success;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
 
+import javax.crypto.Cipher;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
@@ -41,12 +47,18 @@ import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.messages.Messages;
 
+import java.util.Base64;
+import java.util.Map;
+
 public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityProviderConfig> {
 
 	protected static final Logger logger = Logger.getLogger(CasIdentityProvider.class);
 	protected static final Logger LOGGER_DUMP_USER_PROFILE = Logger.getLogger("org.keycloak.social.user_profile_dump");
 
 	public static final String USER_ATTRIBUTES = "UserAttributes";
+	public static final String USER_ATTRIBUTE_PREFERRED_USERNAME = "preferred_username";
+	public static final String USER_ATTRIBUTE_PGT = "proxyGrantingTicket";
+	public static final String CERT_LOCATION = "/scripts/pkcs8_key";
 
 	private final Client client;
 
@@ -163,11 +175,19 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 				}
 				Success success = serviceResponse.getSuccess();
 				BrokeredIdentityContext user = new BrokeredIdentityContext(success.getUser());
-				user.setUsername(success.getUser());
+				user.setUsername(getAttributeValue(USER_ATTRIBUTE_PREFERRED_USERNAME, success.getUser(), success.getAttributes()));
+				
+				//Add the user's PGT token as a Keycloak attribute
+				String encodedPgt = getAttributeValue(USER_ATTRIBUTE_PGT, "", success.getAttributes());
+				String decodedPgt = decodePgt(encodedPgt);
+						
+				success.getAttributes().replace(USER_ATTRIBUTE_PGT, decodedPgt);
+				
 				user.getContextData().put(USER_ATTRIBUTES, success.getAttributes());
 				user.setIdpConfig(config);
 				user.setIdp(CasIdentityProvider.this);
 				user.setCode(state);
+
 				return user;
 			} catch (Exception e) {
 				throw new IdentityBrokerException("Could not fetch attributes from External IdP's userinfo endpoint.", e);
@@ -176,6 +196,47 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 					response.close();
 				}
 			}
+		}
+
+		private void logUserInfo() {
+				Exception ex = new Exception();	
+				logger.error("NON ERROR -- getFederatedIdentity", ex);
+				logger.error("User Profile XML Data for provider " + config.getAlias() + ": " + response.readEntity(String.class), ex);
+		}
+	
+		private String getAttributeValue(final String attributeName, final String fallbackValue, final Map<String, Object> attributes) {
+			String result = fallbackValue;
+
+			for (Map.Entry<String, Object> entry : attributes.entrySet()) {
+				String key = entry.getKey();
+				String value = entry.getValue().toString();
+				
+				if(key.equals(attributeName) && value != null && !value.isEmpty()) {
+					result = value;
+					break;
+				}
+			}
+
+			return result;
+		}
+	
+		private String decodePgt(final String encodedPgt) throws Exception {
+			final PrivateKey privateKey = getPK();	
+			final Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
+			final byte[] cred64 = Base64.getDecoder().decode(encodedPgt);
+			cipher.init(Cipher.DECRYPT_MODE, privateKey);
+			final byte[] cipherData = cipher.doFinal(cred64);
+
+			return new String(cipherData);
+		}
+		
+		private PrivateKey getPK() throws Exception {
+			java.nio.file.Path localFile = Paths.get(CERT_LOCATION);
+			byte[] keyBytes = Files.readAllBytes(localFile);
+
+			PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			return kf.generatePrivate(spec);
 		}
 	}
 }

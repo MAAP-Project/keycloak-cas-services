@@ -5,9 +5,12 @@ import io.github.johnjcool.keycloak.broker.cas.jaxb.ServiceResponseJaxbProvider;
 import io.undertow.Undertow;
 
 import java.io.File;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -26,6 +29,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import java.io.*;
+import java.nio.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.spec.*;
 
 public class ServiceResponseTest {
 
@@ -69,6 +78,34 @@ public class ServiceResponseTest {
 
 		Assert.assertEquals("test", success.getUser());
 		Assert.assertTrue(success.getAttributes().isEmpty());
+	}
+
+	private static PrivateKey getPK(String filename)
+		throws Exception {
+		
+		java.nio.file.Path localFile = Paths.get(filename);
+
+		byte[] keyBytes = Files.readAllBytes(localFile);
+
+		PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+		KeyFactory kf = KeyFactory.getInstance("RSA");
+		return kf.generatePrivate(spec);
+	}
+
+	@Test
+	public void testReadCertificate() throws Exception {
+		//This should be the proxy granting ticket issued by cas upon login
+		final String encodedPgt = "";
+
+		final String privateKeyFileLocation = "";
+		final PrivateKey privateKey = getPK(privateKeyFileLocation);	
+		final Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
+		final byte[] cred64 = Base64.getDecoder().decode(encodedPgt);
+		cipher.init(Cipher.DECRYPT_MODE, privateKey);
+		final byte[] cipherData = cipher.doFinal(cred64);
+
+		System.out.println(new String(cipherData));
+		Assert.assertEquals("test", "test");
 	}
 
 	@Path("")

@@ -17,6 +17,7 @@ public final class UrlHelper {
 	private static final String PROVIDER_PARAMETER_GATEWAY = "gateway";
 	public static final String PROVIDER_PARAMETER_TICKET = "ticket";
 	public static final String PROVIDER_PARAMETER_STATE = "state";
+	public static final String PROVIDER_PARAMETER_PROXY_URL = "pgtUrl";
 
 	private UrlHelper() {
 		// util
@@ -40,6 +41,10 @@ public final class UrlHelper {
 		if (config.isRenew()) {
 			builder.queryParam(PROVIDER_PARAMETER_RENEW, config.isRenew());
 		}
+
+		//add a proxy query string param for pgt ticket issuance
+		builder.queryParam(PROVIDER_PARAMETER_PROXY_URL, config.getCasServerUrlPrefix());
+
 		return builder;
 	}
 

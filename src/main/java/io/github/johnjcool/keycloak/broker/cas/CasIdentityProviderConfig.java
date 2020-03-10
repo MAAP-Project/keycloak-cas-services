@@ -28,7 +28,8 @@ public class CasIdentityProviderConfig extends IdentityProviderModel {
     }
     
     public boolean isCasServerProtocol3() {
-        return Boolean.valueOf(getConfig().get("casServerProtocol3"));
+        //return Boolean.valueOf(getConfig().get("casServerProtocol3"));
+        return true;
     }
 
     public void setGateway(final boolean gateway) {
