@@ -2,6 +2,7 @@ package io.github.johnjcool.keycloak.broker.cas.model;
 
 import io.github.johnjcool.keycloak.broker.cas.jaxb.ServiceResponseJaxbContextResolver;
 import io.github.johnjcool.keycloak.broker.cas.jaxb.ServiceResponseJaxbProvider;
+import io.github.johnjcool.keycloak.broker.cas.util.MaapHelper;
 import io.undertow.Undertow;
 
 import java.io.File;
@@ -91,8 +92,18 @@ public class ServiceResponseTest {
 		KeyFactory kf = KeyFactory.getInstance("RSA");
 		return kf.generatePrivate(spec);
 	}
+	
+	//@Test
+	public void testGetMaapProfile() throws Exception {
+		//This should be the proxy granting ticket decoded by a Maap client
+		final String decodedPgt = "";
+		
+		MaapProfile maapProfile = MaapHelper.getMaapProfile("https://api.maap.xyz", decodedPgt);
+		
+		Assert.assertFalse(maapProfile == null);
+	}
 
-	@Test
+	//@Test
 	public void testReadCertificate() throws Exception {
 		//This should be the proxy granting ticket issued by cas upon login
 		final String encodedPgt = "";

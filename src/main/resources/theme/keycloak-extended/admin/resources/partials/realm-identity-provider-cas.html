@@ -105,6 +105,13 @@
 		        </div>
 		        <kc-tooltip>{{:: 'cas-server-url-prefix.tooltip' | translate}}</kc-tooltip>
 		    </div>
+		    <div class="form-group clearfix">
+		        <label class="col-md-2 control-label" for="maapApiServerUrl"><span class="required">*</span> {{:: 'maap-api-server-url' | translate}}</label>
+		        <div class="col-md-6">
+		            <input class="form-control" id="maapApiServerUrl" type="text" ng-model="identityProvider.config.maapApiServerUrl" required>
+		        </div>
+		        <kc-tooltip>{{:: 'maap-api-server-url.tooltip' | translate}}</kc-tooltip>
+		    </div>
             <div class="form-group">
                 <label class="col-md-2 control-label" for="casServerProtocol3">{{:: 'cas-server-protocol3' | translate}}</label>
                 <div class="col-md-6">

@@ -5,8 +5,11 @@ import static io.github.johnjcool.keycloak.broker.cas.util.UrlHelper.PROVIDER_PA
 import static io.github.johnjcool.keycloak.broker.cas.util.UrlHelper.createAuthenticationUrl;
 import static io.github.johnjcool.keycloak.broker.cas.util.UrlHelper.createLogoutUrl;
 import static io.github.johnjcool.keycloak.broker.cas.util.UrlHelper.createValidateServiceUrl;
+
+import io.github.johnjcool.keycloak.broker.cas.model.MaapProfile;
 import io.github.johnjcool.keycloak.broker.cas.model.ServiceResponse;
 import io.github.johnjcool.keycloak.broker.cas.model.Success;
+import io.github.johnjcool.keycloak.broker.cas.util.MaapHelper;
 
 import java.net.URI;
 import java.nio.file.Files;
@@ -58,6 +61,7 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 	public static final String USER_ATTRIBUTES = "UserAttributes";
 	public static final String USER_ATTRIBUTE_PREFERRED_USERNAME = "preferred_username";
 	public static final String USER_ATTRIBUTE_PGT = "proxyGrantingTicket";
+	public static final String USER_ATTRIBUTE_SSH_KEY = "public_ssh_keys";
 	public static final String CERT_LOCATION = "/scripts/pkcs8_key";
 
 	private final Client client;
@@ -181,7 +185,20 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 				String encodedPgt = getAttributeValue(USER_ATTRIBUTE_PGT, "", success.getAttributes());
 				String decodedPgt = decodePgt(encodedPgt);
 						
-				success.getAttributes().replace(USER_ATTRIBUTE_PGT, decodedPgt);
+				success.getAttributes().replace(USER_ATTRIBUTE_PGT, decodedPgt);				
+				
+				//Update public_ssh_keys value
+				MaapProfile maapProfile = MaapHelper.getMaapProfile(config, decodedPgt);
+				
+				if(maapProfile != null) {
+					
+					String sshKey = maapProfile.getpublic_ssh_key();
+					
+					if(sshKey != null && !sshKey.isEmpty()) {	
+						
+						success.getAttributes().put(USER_ATTRIBUTE_SSH_KEY, sshKey);
+					}
+				}				
 				
 				user.getContextData().put(USER_ATTRIBUTES, success.getAttributes());
 				user.setIdpConfig(config);
@@ -201,7 +218,7 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 		private void logUserInfo() {
 				Exception ex = new Exception();	
 				logger.error("NON ERROR -- getFederatedIdentity", ex);
-				logger.error("User Profile XML Data for provider " + config.getAlias() + ": " + response.readEntity(String.class), ex);
+				//logger.error("User Profile XML Data for provider " + config.getAlias() + ": " + response.readEntity(String.class), ex);
 		}
 	
 		private String getAttributeValue(final String attributeName, final String fallbackValue, final Map<String, Object> attributes) {

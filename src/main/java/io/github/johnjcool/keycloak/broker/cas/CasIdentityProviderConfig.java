@@ -23,6 +23,14 @@ public class CasIdentityProviderConfig extends IdentityProviderModel {
         return getConfig().get("casServerUrlPrefix");
     }
 
+    public void setMaapApiServerUrl(final String maapApiServerUrl) {
+        getConfig().put("maapApiServerUrl", maapApiServerUrl);
+    }
+    
+    public String getMaapApiServerUrl() {
+        return getConfig().get("maapApiServerUrl");
+    }
+
     public void setCasServerProtocol3(final boolean casServerProtocol3) {
         getConfig().put("casServerProtocol3", String.valueOf(casServerProtocol3));
     }
