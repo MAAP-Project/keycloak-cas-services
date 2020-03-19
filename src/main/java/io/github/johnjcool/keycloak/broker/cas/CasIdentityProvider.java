@@ -187,17 +187,20 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 						
 				success.getAttributes().replace(USER_ATTRIBUTE_PGT, decodedPgt);				
 				
-				//Update public_ssh_keys value
-				MaapProfile maapProfile = MaapHelper.getMaapProfile(config, decodedPgt);
-				
-				if(maapProfile != null) {
+				try
+				{
+					//Update public_ssh_keys value
+					MaapProfile maapProfile = MaapHelper.getMaapProfile(config, decodedPgt);
 					
 					String sshKey = maapProfile.getpublic_ssh_key();
 					
 					if(sshKey != null && !sshKey.isEmpty()) {	
-						
 						success.getAttributes().put(USER_ATTRIBUTE_SSH_KEY, sshKey);
 					}
+					
+				}
+				catch(Exception ex) {
+					logger.error("ERROR --  MaapHelper.getMaapProfile", ex);
 				}				
 				
 				user.getContextData().put(USER_ATTRIBUTES, success.getAttributes());
