@@ -60,9 +60,13 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 
 	public static final String USER_ATTRIBUTES = "UserAttributes";
 	public static final String USER_ATTRIBUTE_PREFERRED_USERNAME = "preferred_username";
+	public static final String USER_ATTRIBUTE_USER_NAME = "user_name";
 	public static final String USER_ATTRIBUTE_PGT = "proxyGrantingTicket";
 	public static final String USER_ATTRIBUTE_SSH_KEY = "public_ssh_keys";
+	public static final String USER_ATTRIBUTE_ISS = "iss";
+	public static final String USER_VALUE_GLUU = "gluu";
 	public static final String CERT_LOCATION = "/scripts/pkcs8_key";
+	public static final String DEBUG_USER = "satoriu";
 
 	private final Client client;
 
@@ -179,7 +183,9 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 				}
 				Success success = serviceResponse.getSuccess();
 				BrokeredIdentityContext user = new BrokeredIdentityContext(success.getUser());
-				user.setUsername(getAttributeValue(USER_ATTRIBUTE_PREFERRED_USERNAME, success.getUser(), success.getAttributes()));
+
+				String username = getUserName(success.getAttributes(), success.getUser());
+				user.setUsername(username);
 				
 				//Add the user's PGT token as a Keycloak attribute
 				String encodedPgt = getAttributeValue(USER_ATTRIBUTE_PGT, "", success.getAttributes());
@@ -195,13 +201,16 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 					String sshKey = maapProfile.getpublic_ssh_key();
 					
 					if(sshKey != null && !sshKey.isEmpty()) {	
+
 						success.getAttributes().put(USER_ATTRIBUTE_SSH_KEY, sshKey);
-					}
-					
+					}					
 				}
 				catch(Exception ex) {
 					logger.error("ERROR --  MaapHelper.getMaapProfile", ex);
-				}				
+				}	
+				
+				if(username.contains(DEBUG_USER))
+					logUserInfo("attribute results", response);
 				
 				user.getContextData().put(USER_ATTRIBUTES, success.getAttributes());
 				user.setIdpConfig(config);
@@ -218,10 +227,10 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 			}
 		}
 
-		private void logUserInfo() {
+		private void logUserInfo(final String msg, final Response response) {
 				Exception ex = new Exception();	
-				logger.error("NON ERROR -- getFederatedIdentity", ex);
-				//logger.error("User Profile XML Data for provider " + config.getAlias() + ": " + response.readEntity(String.class), ex);
+				logger.error("NON ERROR -- " + msg, ex);
+				logger.error("User Profile XML Data: " + response.readEntity(String.class), ex);
 		}
 	
 		private String getAttributeValue(final String attributeName, final String fallbackValue, final Map<String, Object> attributes) {
@@ -238,6 +247,13 @@ public class CasIdentityProvider extends AbstractIdentityProvider<CasIdentityPro
 			}
 
 			return result;
+		}
+
+		private String getUserName(final Map<String, Object> attributes, final String fallbackValue) {
+
+			Boolean	isGluuAuth = getAttributeValue(USER_ATTRIBUTE_ISS, "", attributes).contains(USER_VALUE_GLUU);	
+
+			return getAttributeValue(isGluuAuth ? USER_ATTRIBUTE_USER_NAME : USER_ATTRIBUTE_PREFERRED_USERNAME, fallbackValue, attributes);
 		}
 	
 		private String decodePgt(final String encodedPgt) throws Exception {
